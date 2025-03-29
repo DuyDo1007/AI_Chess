@@ -192,7 +192,7 @@ def is_valid_move(board, start_pos, end_pos):
 
     return False  # Nếu không phải quân cờ hợp lệ
 
-def is_check(board, color):
+'''def is_check(board, color):
     """Kiểm tra xem vua có bị chiếu không"""
     # Tìm vị trí vua
     king_pos = None
@@ -272,3 +272,4 @@ def is_checkmate(board, color):
                                                 return False
     
     return True
+'''
