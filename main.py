@@ -46,7 +46,7 @@ board = [
     ["b_pawn"] * 8,
     [None] * 8, [None] * 8, [None] * 8, [None] * 8,
     ["w_pawn"] * 8,
-    ["w_rook", "w_knight", "w_bishop", "w_queen", "w_king", "w_bishop", "w_knight", "w_rook"]
+    ["w_rook", "w_knight", "w_bishop", "w_king","w_queen", "w_bishop", "w_knight", "w_rook"]
 ]
 
 def draw_board():

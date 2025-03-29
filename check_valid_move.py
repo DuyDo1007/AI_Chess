@@ -191,3 +191,84 @@ def is_valid_move(board, start_pos, end_pos):
         return is_valid_king_move(board, start_pos, end_pos)
 
     return False  # Nếu không phải quân cờ hợp lệ
+
+def is_check(board, color):
+    """Kiểm tra xem vua có bị chiếu không"""
+    # Tìm vị trí vua
+    king_pos = None
+    for y in range(8):
+        for x in range(8):
+            piece = board[y][x]
+            if piece and piece.startswith(f"{color[0]}_king"):
+                king_pos = (x, y)
+                break
+        if king_pos:
+            break
+    
+    if not king_pos:
+        return False
+        
+    # Kiểm tra xem có quân đối phương nào có thể tấn công vua không
+    opponent = "black" if color == "white" else "white"
+    for y in range(8):
+        for x in range(8):
+            piece = board[y][x]
+            if piece and piece.startswith(f"{opponent[0]}_"):
+                if can_capture(board, (x, y), king_pos):
+                    return True
+    return False
+
+def is_checkmate(board, color):
+    """Kiểm tra xem có phải là chiếu hết không"""
+    if not is_check(board, color):
+        return False
+        
+    # Tìm vị trí vua
+    king_pos = None
+    for y in range(8):
+        for x in range(8):
+            piece = board[y][x]
+            if piece and piece.startswith(f"{color[0]}_king"):
+                king_pos = (x, y)
+                break
+        if king_pos:
+            break
+    
+    if not king_pos:
+        return True
+        
+    # Kiểm tra xem vua có thể di chuyển đến ô nào không
+    for y in range(8):
+        for x in range(8):
+            if is_valid_move(board, king_pos, (x, y)):
+                # Thử di chuyển vua
+                temp_board = [row[:] for row in board]
+                temp_board[y][x] = temp_board[king_pos[1]][king_pos[0]]
+                temp_board[king_pos[1]][king_pos[0]] = None
+                
+                # Nếu sau khi di chuyển không bị chiếu, thì không phải chiếu hết
+                if not is_check(temp_board, color):
+                    return False
+    
+    # Kiểm tra xem có quân nào có thể chặn chiếu không
+    for y in range(8):
+        for x in range(8):
+            piece = board[y][x]
+            if piece and piece.startswith(f"{color[0]}_"):
+                # Tìm quân đang chiếu vua
+                for oy in range(8):
+                    for ox in range(8):
+                        opponent_piece = board[oy][ox]
+                        if opponent_piece and opponent_piece.startswith(f"{'b' if color == 'white' else 'w'}_"):
+                            if can_capture(board, (ox, oy), king_pos):
+                                # Thử di chuyển quân để chặn
+                                for ny in range(8):
+                                    for nx in range(8):
+                                        if is_valid_move(board, (x, y), (nx, ny)):
+                                            temp_board = [row[:] for row in board]
+                                            temp_board[ny][nx] = temp_board[y][x]
+                                            temp_board[y][x] = None
+                                            if not is_check(temp_board, color):
+                                                return False
+    
+    return True
