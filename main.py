@@ -20,7 +20,7 @@ GREEN = pygame.Color(0, 255, 0, 100)     # Màu xanh lá cho các nước đi h�
 selected_piece = None
 valid_moves = []
 current_player = "white"
-
+check_king_moved = False
 # Load hình ảnh quân cờ
 pieces = {
     "w_pawn": pygame.image.load("images/white-pawn.png"),
@@ -138,7 +138,6 @@ def main():
                         # Reset selection
                         selected_piece = None
                         valid_moves = []
-                
                 # Click vào ô trống
                 elif selected_piece:
                     if (col, row) in valid_moves:
@@ -146,6 +145,18 @@ def main():
                         piece = board[selected_piece[1]][selected_piece[0]]
                         board[selected_piece[1]][selected_piece[0]] = None
                         board[row][col] = piece
+                        
+                        # Xử lý nhập thành
+                        if "king" in piece and abs(col - selected_piece[0]) == 2:
+                            # Xác định hướng nhập thành
+                            step = 1 if col > selected_piece[0] else -1
+                            rook_x = 0 if step == -1 else 7
+                            new_rook_x = col - step
+                            
+                            # Di chuyển xe
+                            board[row][new_rook_x] = board[row][rook_x]
+                            board[row][rook_x] = None
+                        
                         # Đổi lượt chơi
                         current_player = "black" if current_player == "white" else "white"
                         print(f"Current player: {current_player}")

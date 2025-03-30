@@ -1,3 +1,7 @@
+# Biến toàn cục để theo dõi việc vua đã di chuyển chưa
+white_king_moved = False
+black_king_moved = False
+
 def get_piece_info(piece):
     """Lấy thông tin về quân cờ từ tên file"""
     if piece is None:
@@ -117,11 +121,41 @@ def is_valid_queen_move(board, start_pos, end_pos):
     return is_valid_rook_move(board, start_pos, end_pos) or is_valid_bishop_move(board, start_pos, end_pos)
 
 def is_valid_king_move(board, start_pos, end_pos):
+    global white_king_moved, black_king_moved
     s_x, s_y = start_pos
     e_x, e_y = end_pos
-
+    
+    # Lấy màu của vua
+    piece = board[s_y][s_x]
+    piece_color, _ = get_piece_info(piece)
+    
     # Vua di chuyển 1 ô theo mọi hướng
-    return abs(e_x - s_x) <= 1 and abs(e_y - s_y) <= 1
+    if abs(e_x - s_x) <= 1 and abs(e_y - s_y) <= 1:
+        # Đánh dấu vua đã di chuyển
+        if piece_color == "white":
+            white_king_moved = True
+        else:
+            black_king_moved = True
+        return True
+        
+    # Nhập thành (castling)
+    if (e_y - s_y) == 0 and abs(s_x - e_x) == 2:
+        # Kiểm tra vua chưa di chuyển
+        if (piece_color == "white" and white_king_moved) or (piece_color == "black" and black_king_moved):
+            return False
+            
+        # Kiểm tra xe ở góc
+        rook_x = 0 if s_x > e_x else 7
+        rook = board[s_y][rook_x]
+        if rook and ("w_rook" in rook or "b_rook" in rook):
+            # Kiểm tra đường đi không có quân
+            step = 1 if s_x < e_x else -1
+            for x in range(s_x + step, e_x, step):
+                if board[s_y][x] is not None:
+                    return False
+            return True
+            
+    return False
 
 def can_capture(board, start_pos, end_pos):
     """Kiểm tra xem quân cờ có thể ăn quân đối phương không"""
