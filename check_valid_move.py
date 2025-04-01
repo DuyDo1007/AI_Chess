@@ -1,7 +1,8 @@
 # Biến toàn cục để theo dõi việc vua đã di chuyển chưa
 white_king_moved = False
 black_king_moved = False
-
+w_king_pos = (3,1)
+b_king_pos = (3,8)
 def get_piece_info(piece):
     """Lấy thông tin về quân cờ từ tên file"""
     if piece is None:
@@ -11,9 +12,9 @@ def get_piece_info(piece):
     filename = str(piece)
     
     # Xác định màu và loại quân cờ
-    if filename.startswith("w_"):
+    if filename.startswith("white_"):
         color = "white"
-    elif filename.startswith("b_"):
+    elif filename.startswith("black_"):
         color = "black"
     else:
         return None, None
@@ -122,13 +123,14 @@ def is_valid_queen_move(board, start_pos, end_pos):
 
 def is_valid_king_move(board, start_pos, end_pos):
     global white_king_moved, black_king_moved
+    king_pos = None
     s_x, s_y = start_pos
     e_x, e_y = end_pos
     
     # Lấy màu của vua
     piece = board[s_y][s_x]
     piece_color, _ = get_piece_info(piece)
-    
+    king_pos = (e_x, e_y)
     # Vua di chuyển 1 ô theo mọi hướng
     if abs(e_x - s_x) <= 1 and abs(e_y - s_y) <= 1:
         # Đánh dấu vua đã di chuyển
@@ -147,7 +149,7 @@ def is_valid_king_move(board, start_pos, end_pos):
         # Kiểm tra xe ở góc
         rook_x = 0 if s_x > e_x else 7
         rook = board[s_y][rook_x]
-        if rook and ("w_rook" in rook or "b_rook" in rook):
+        if rook and ("white_rook" in rook or "black_rook" in rook):
             # Kiểm tra đường đi không có quân
             step = 1 if s_x < e_x else -1
             for x in range(s_x + step, e_x, step):
@@ -226,14 +228,14 @@ def is_valid_move(board, start_pos, end_pos):
 
     return False  # Nếu không phải quân cờ hợp lệ
 
-'''def is_check(board, color):
+def is_check(board, color):
     """Kiểm tra xem vua có bị chiếu không"""
     # Tìm vị trí vua
     king_pos = None
     for y in range(8):
         for x in range(8):
             piece = board[y][x]
-            if piece and piece.startswith(f"{color[0]}_king"):
+            if piece and piece.startswith(f"{color}_king"):
                 king_pos = (x, y)
                 break
         if king_pos:
@@ -247,7 +249,7 @@ def is_valid_move(board, start_pos, end_pos):
     for y in range(8):
         for x in range(8):
             piece = board[y][x]
-            if piece and piece.startswith(f"{opponent[0]}_"):
+            if piece and piece.startswith(f"{opponent}_"):
                 if can_capture(board, (x, y), king_pos):
                     return True
     return False
@@ -262,7 +264,7 @@ def is_checkmate(board, color):
     for y in range(8):
         for x in range(8):
             piece = board[y][x]
-            if piece and piece.startswith(f"{color[0]}_king"):
+            if piece and piece.startswith(f"{color}_king"):
                 king_pos = (x, y)
                 break
         if king_pos:
@@ -288,12 +290,12 @@ def is_checkmate(board, color):
     for y in range(8):
         for x in range(8):
             piece = board[y][x]
-            if piece and piece.startswith(f"{color[0]}_"):
+            if piece and piece.startswith(f"{color}_"):
                 # Tìm quân đang chiếu vua
                 for oy in range(8):
                     for ox in range(8):
                         opponent_piece = board[oy][ox]
-                        if opponent_piece and opponent_piece.startswith(f"{'b' if color == 'white' else 'w'}_"):
+                        if opponent_piece and opponent_piece.startswith(f"{'black' if color == 'white' else 'white'}_"):
                             if can_capture(board, (ox, oy), king_pos):
                                 # Thử di chuyển quân để chặn
                                 for ny in range(8):
@@ -306,4 +308,3 @@ def is_checkmate(board, color):
                                                 return False
     
     return True
-'''
