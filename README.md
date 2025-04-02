@@ -45,7 +45,7 @@ Build AI_Chess from the source and install dependencies:
 
 1.  Clone the repository:
     ```
-    git clone [https://github.com/ouyou100/AI_Chess](https://www.google.com/search?q=https://github.com/ouyou100/AI_Chess)
+    git clone [https://github.com/DuyDo1007/AI_Chess](https://www.google.com/search?q=https://github.com/DuyDo1007/AI_Chess)
     ```
 2.  Navigate to the project directory:
     ```
