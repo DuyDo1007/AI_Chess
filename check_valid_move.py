@@ -134,10 +134,10 @@ def is_valid_king_move(board, start_pos, end_pos):
     # Vua di chuyển 1 ô theo mọi hướng
     if abs(e_x - s_x) <= 1 and abs(e_y - s_y) <= 1:
         # Đánh dấu vua đã di chuyển
-        if piece_color == "white":
+        if piece_color == "white" and end_pos != (4,7):
             white_king_moved = True
-        else:
-            black_king_moved = True
+        elif piece_color == "black" and end_pos != (4,0):
+            black_king_moved = True 
         return True
         
     # Nhập thành (castling)

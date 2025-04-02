@@ -1,5 +1,7 @@
 import pygame
 import check_valid_move
+import json
+import os
 
 # Khởi tạo Pygame
 pygame.init()
@@ -9,6 +11,11 @@ WIDTH, HEIGHT = 640, 640
 SQ_SIZE = WIDTH // 8  # Kích thước mỗi ô cờ
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Cờ Vua")
+
+# Tải và thiết lập logo
+logo = pygame.image.load("images/wN.png")
+logo = pygame.transform.scale(logo, (32, 32))
+pygame.display.set_icon(logo)
 
 # Màu sắc
 WHITE = pygame.Color("white")
@@ -25,7 +32,13 @@ check = False
 w_king_pos = (4, 7)  # Vị trí vua trắng
 b_king_pos = (4, 0)  # Vị trí vua đen
 promotion_piece = None  # Quân cờ được chọn để phong cấp
-
+count_draw = 0
+save_button = pygame.Rect(WIDTH + 20, 10, 80, 30)
+load_button = pygame.Rect(WIDTH + 20, 50, 80, 30)
+button_font = pygame.font.Font(None, 36)  # Font cho nút Save và Load
+message_font = pygame.font.Font(None, 74)  # Font cho thông báo chiếu và chiếu hết
+save_text = button_font.render("Save", True, (255, 255, 255))
+load_text = button_font.render("Load", True, (255, 255, 255))
 # Load hình ảnh quân cờ
 pieces = {
     "white_pawn": pygame.image.load("images/wP.png"),
@@ -98,6 +111,49 @@ def update_valid_moves():
     
     if selected_piece:
         col, row = selected_piece
+        piece = board[row][col]
+        
+        # Thêm các nước đi nhập thành cho vua
+        if "king" in piece:
+            # Nhập thành bên phải
+            if col + 2 < 8:
+                # Kiểm tra không có quân cờ nào ở giữa
+                if all(board[row][x] is None for x in range(col + 1, col + 3)):
+                    # Kiểm tra xe có đúng vị trí và màu không
+                    rook_piece = board[row][7]
+                    if rook_piece and rook_piece.startswith(current_player + "_rook"):
+                        # Kiểm tra các ô vua đi qua có bị chiếu không
+                        temp_board = [row[:] for row in board]
+                        is_safe = True
+                        for x in range(col, col + 3):
+                            temp_board[row][x] = piece
+                            if check_valid_move.is_check(temp_board, current_player):
+                                is_safe = False
+                                break
+                            temp_board[row][x] = None
+                        if is_safe:
+                            valid_moves.append((col + 2, row))
+            
+            # Nhập thành bên trái
+            if col - 2 >= 0:
+                # Kiểm tra không có quân cờ nào ở giữa
+                if all(board[row][x] is None for x in range(col - 2, col)):
+                    # Kiểm tra xe có đúng vị trí và màu không
+                    rook_piece = board[row][0]
+                    if rook_piece and rook_piece.startswith(current_player + "_rook"):
+                        # Kiểm tra các ô vua đi qua có bị chiếu không
+                        temp_board = [row[:] for row in board]
+                        is_safe = True
+                        for x in range(col - 2, col + 1):
+                            temp_board[row][x] = piece
+                            if check_valid_move.is_check(temp_board, current_player):
+                                is_safe = False
+                                break
+                            temp_board[row][x] = None
+                        if is_safe:
+                            valid_moves.append((col - 2, row))
+        
+        # Thêm các nước đi thông thường
         for x in range(8):
             for y in range(8):
                 if check_valid_move.is_valid_move(board, (col, row), (x, y)):
@@ -112,7 +168,9 @@ def update_valid_moves():
                         if not check_valid_move.is_check(temp_board, current_player):
                             valid_moves.append((x, y))
                     else:
-                        valid_moves.append((x, y))
+                        # Nếu không bị chiếu, kiểm tra xem nước đi có khiến bị chiếu không
+                        if not check_valid_move.is_check(temp_board, current_player):
+                            valid_moves.append((x, y))
 
 def update_king_positions():
     """Cập nhật vị trí vua trên bàn cờ"""
@@ -126,31 +184,62 @@ def update_king_positions():
 
 def draw_promotion_menu(row, col):
     """Vẽ menu phong quân"""
+    # Vẽ nền menu ở giữa màn hình
+    menu_width = SQ_SIZE * 4
+    menu_height = SQ_SIZE
+    menu_x = (WIDTH - menu_width) // 2
+    menu_y = (HEIGHT - menu_height) // 2
+    
+    # Vẽ nền mờ cho toàn màn hình
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 128))  # Màu đen với độ trong suốt
+    screen.blit(overlay, (0, 0))
+    
     # Vẽ nền menu
-    menu_surface = pygame.Surface((SQ_SIZE * 4, SQ_SIZE))
+    menu_surface = pygame.Surface((menu_width, menu_height))
     menu_surface.fill(WHITE)
-    screen.blit(menu_surface, (col * SQ_SIZE, row * SQ_SIZE))
+    screen.blit(menu_surface, (menu_x, menu_y))
+    
+    # Vẽ viền menu
+    pygame.draw.rect(screen, GRAY, (menu_x, menu_y, menu_width, menu_height), 2)
     
     # Vẽ các quân cờ có thể phong cấp
     pieces_to_show = ["queen", "rook", "bishop", "knight"]
     for i, piece in enumerate(pieces_to_show):
+        # Vẽ nền cho từng ô
+        pygame.draw.rect(screen, GRAY, (menu_x + i * SQ_SIZE, menu_y, SQ_SIZE, SQ_SIZE), 1)
+        
+        # Vẽ quân cờ
         piece_name = f"{current_player}_{piece}"
         piece_surface = pieces[piece_name]
-        screen.blit(piece_surface, (col * SQ_SIZE + i * SQ_SIZE, row * SQ_SIZE))
+        screen.blit(piece_surface, (menu_x + i * SQ_SIZE, menu_y))
+        
+        # Highlight ô khi di chuột qua
+        mx, my = pygame.mouse.get_pos()
+        if menu_x + i * SQ_SIZE <= mx <= menu_x + (i + 1) * SQ_SIZE and menu_y <= my <= menu_y + SQ_SIZE:
+            s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
+            s.fill((255, 255, 0, 100))  # Màu vàng với độ trong suốt
+            screen.blit(s, (menu_x + i * SQ_SIZE, menu_y))
 
 def handle_promotion(row, col):
     """Xử lý phong quân"""
     global promotion_piece
     mx, my = pygame.mouse.get_pos()
-    menu_col = mx // SQ_SIZE
-    menu_row = my // SQ_SIZE
+    
+    # Tính toán vị trí menu ở giữa màn hình
+    menu_width = SQ_SIZE * 4
+    menu_height = SQ_SIZE
+    menu_x = (WIDTH - menu_width) // 2
+    menu_y = (HEIGHT - menu_height) // 2
     
     # Kiểm tra click có trong menu phong quân không
-    if menu_row == row and col <= menu_col <= col + 3:
-        pieces_to_show = ["queen", "rook", "bishop", "knight"]
-        selected_piece = pieces_to_show[menu_col - col]
-        promotion_piece = f"{current_player}_{selected_piece}"
-        return True
+    if menu_y <= my <= menu_y + menu_height and menu_x <= mx <= menu_x + menu_width:
+        menu_col = (mx - menu_x) // SQ_SIZE
+        if 0 <= menu_col < 4:  # Kiểm tra menu_col có hợp lệ không
+            pieces_to_show = ["queen", "rook", "bishop", "knight"]
+            selected_piece = pieces_to_show[menu_col]
+            promotion_piece = f"{current_player}_{selected_piece}"
+            return True
     return False
 
 def reset_board():
@@ -169,19 +258,96 @@ def reset_board():
     valid_moves = []
     w_king_pos = (4, 7)
     b_king_pos = (4, 0)
+    save_button = pygame.Rect(WIDTH + 20, 10, 80, 30)
+    load_button = pygame.Rect(WIDTH + 20, 50, 80, 30)
     check_valid_move.white_king_moved = False
     check_valid_move.black_king_moved = False
 
+def save_game():
+    """Lưu trạng thái game vào file"""
+    game_state = {
+        'board': board,
+        'current_player': current_player,
+        'check': check,
+        'w_king_pos': w_king_pos,
+        'b_king_pos': b_king_pos,
+        'white_king_moved': check_valid_move.white_king_moved,
+        'black_king_moved': check_valid_move.black_king_moved
+    }
+    
+    try:
+        with open('game_state.json', 'w') as f:
+            json.dump(game_state, f)
+        return True
+    except:
+        return False
+
+def load_game():
+    """Tải trạng thái game từ file"""
+    global board, current_player, check, w_king_pos, b_king_pos
+    
+    try:
+        if not os.path.exists('game_state.json'):
+            return False
+            
+        with open('game_state.json', 'r') as f:
+            game_state = json.load(f)
+            
+        board = game_state['board']
+        current_player = game_state['current_player']
+        check = game_state['check']
+        w_king_pos = tuple(game_state['w_king_pos'])
+        b_king_pos = tuple(game_state['b_king_pos'])
+        check_valid_move.white_king_moved = game_state['white_king_moved']
+        check_valid_move.black_king_moved = game_state['black_king_moved']
+        return True
+    except:
+        return False
+
 def main():
-    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece
+    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece, save_button, load_button
     running = True
+    count_draw = 0
     promotion_pos = None  # Vị trí cần phong quân
+    game_started = False  # Biến kiểm tra game đã bắt đầu chưa
+
+    # Thêm nút Start Game
+    start_button = pygame.Rect(WIDTH/2 - 100, HEIGHT/2 - 30, 200, 60)
+    start_font = pygame.font.Font(None, 48)
+
+    # Tạo surface mới cho toàn bộ màn hình (bao gồm cả phần nút)
+    screen_width = WIDTH + 120  # Thêm 120px cho phần nút
+    full_screen = pygame.display.set_mode((screen_width, HEIGHT))
+    pygame.display.set_caption("Cờ Vua")
 
     while running:
         # Vẽ bàn cờ
         draw_board()
         draw_highlight()
         draw_pieces()
+        
+        if not game_started:
+            # Vẽ nền mờ cho toàn màn hình
+            overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 128))  # Màu đen với độ trong suốt
+            full_screen.blit(overlay, (0, 0))
+            
+            # Vẽ nút Start Game
+            pygame.draw.rect(full_screen, (50, 205, 50), start_button)  # Màu xanh lá
+            pygame.draw.rect(full_screen, (0, 0, 0), start_button, 3)  # Viền đen
+            start_text = start_font.render("Start Game", True, (255, 255, 255))
+            text_rect = start_text.get_rect(center=start_button.center)
+            full_screen.blit(start_text, text_rect)
+        else:
+            # Vẽ nút Save và Load
+            pygame.draw.rect(full_screen, (50, 205, 50), save_button)  # Màu xanh lá
+            pygame.draw.rect(full_screen, (0, 0, 0), save_button, 2)  # Viền đen
+            pygame.draw.rect(full_screen, (50, 205, 50), load_button)  # Màu xanh lá
+            pygame.draw.rect(full_screen, (0, 0, 0), load_button, 2)  # Viền đen
+            save_text = button_font.render("Save", True, (255, 255, 255))
+            load_text = button_font.render("Load", True, (255, 255, 255))
+            full_screen.blit(save_text, (save_button.x + 20, save_button.y + 5))
+            full_screen.blit(load_text, (load_button.x + 20, load_button.y + 5))
         
         # Vẽ menu phong quân nếu cần
         if promotion_pos:
@@ -197,7 +363,57 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mx, my = pygame.mouse.get_pos()
+                
+                if not game_started:
+                    # Kiểm tra click vào nút Start Game
+                    if start_button.collidepoint(mx, my):
+                        game_started = True
+                        continue
+                else:
+                    # Kiểm tra click vào nút Save
+                    if save_button.collidepoint(mx, my):
+                        if save_game():
+                            text = message_font.render("Game Saved!", True, (0, 255, 0))
+                        else:
+                            text = message_font.render("Save Failed!", True, (255, 0, 0))
+                        text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                        # Vẽ nền mờ cho toàn màn hình
+                        overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                        overlay.fill((0, 0, 0, 128))
+                        full_screen.blit(overlay, (0, 0))
+                        # Vẽ thông báo
+                        full_screen.blit(text, text_rect)
+                        pygame.display.flip()
+                        pygame.time.wait(1000)
+                        continue
+                        
+                    # Kiểm tra click vào nút Load
+                    if load_button.collidepoint(mx, my):
+                        if load_game():
+                            text = message_font.render("Game Loaded!", True, (0, 255, 0))
+                            selected_piece = None
+                            valid_moves = []
+                        else:
+                            text = message_font.render("Load Failed!", True, (255, 0, 0))
+                        text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                        # Vẽ nền mờ cho toàn màn hình
+                        overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                        overlay.fill((0, 0, 0, 128))
+                        full_screen.blit(overlay, (0, 0))
+                        # Vẽ thông báo
+                        full_screen.blit(text, text_rect)
+                        pygame.display.flip()
+                        pygame.time.wait(1000)
+                        continue
+
+                if not game_started:
+                    continue
+
                 col, row = mx // SQ_SIZE, my // SQ_SIZE
+                
+                # Kiểm tra click có nằm trong phạm vi bàn cờ không
+                if col < 0 or col >= 8 or row < 0 or row >= 8:
+                    continue
 
                 # Xử lý phong quân nếu đang trong trạng thái phong quân
                 if promotion_pos:
@@ -213,10 +429,14 @@ def main():
                         if check_valid_move.is_check(board, current_player):
                             if check_valid_move.is_checkmate(board, current_player):
                                 # Hiển thị thông báo chiếu hết
-                                font = pygame.font.Font(None, 74)
-                                text = font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
+                                text = message_font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
                                 text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                                screen.blit(text, text_rect)
+                                # Vẽ nền mờ cho toàn màn hình
+                                overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                                overlay.fill((0, 0, 0, 128))
+                                full_screen.blit(overlay, (0, 0))
+                                # Vẽ thông báo
+                                full_screen.blit(text, text_rect)
                                 pygame.display.flip()
                                 pygame.time.wait(2000)
                                 # Reset bàn cờ và bắt đầu ván mới
@@ -232,9 +452,8 @@ def main():
                                 s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
                                 s.fill(RED)
                                 screen.blit(s, (king_pos[0] * SQ_SIZE, king_pos[1] * SQ_SIZE))
-                                font = pygame.font.Font(None, 74)
                                 pygame.display.flip()
-                                text = font.render("Check!", True, (255, 0, 0))
+                                text = message_font.render("Check!", True, (255, 0, 0))
                                 text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
                                 screen.blit(text, text_rect)
                                 pygame.display.flip()
@@ -282,10 +501,14 @@ def main():
                             if check_valid_move.is_check(board, current_player):
                                 if check_valid_move.is_checkmate(board, current_player):
                                     # Hiển thị thông báo chiếu hết
-                                    font = pygame.font.Font(None, 74)
-                                    text = font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
+                                    text = message_font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
                                     text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                                    screen.blit(text, text_rect)
+                                    # Vẽ nền mờ cho toàn màn hình
+                                    overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                                    overlay.fill((0, 0, 0, 128))
+                                    full_screen.blit(overlay, (0, 0))
+                                    # Vẽ thông báo
+                                    full_screen.blit(text, text_rect)
                                     pygame.display.flip()
                                     pygame.time.wait(2000)
                                     # Reset bàn cờ và bắt đầu ván mới
@@ -301,9 +524,8 @@ def main():
                                     s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
                                     s.fill(RED)
                                     screen.blit(s, (king_pos[0] * SQ_SIZE, king_pos[1] * SQ_SIZE))
-                                    font = pygame.font.Font(None, 74)
                                     pygame.display.flip()
-                                    text = font.render("Check!", True, (255, 0, 0))
+                                    text = message_font.render("Check!", True, (255, 0, 0))
                                     text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
                                     screen.blit(text, text_rect)
                                     pygame.display.flip()
@@ -331,20 +553,44 @@ def main():
                             is_valid_move = not check_valid_move.is_check(temp_board, current_player)
                         
                         if is_valid_move:
-                            # Di chuyển quân cờ
-                            board[selected_piece[1]][selected_piece[0]] = None
-                            board[row][col] = piece
-                            
                             # Xử lý nhập thành
                             if "king" in piece and abs(col - selected_piece[0]) == 2:
                                 # Xác định hướng nhập thành
-                                step = 1 if col > selected_piece[0] else -1
-                                rook_x = 0 if step == -1 else 7
-                                new_rook_x = col - step
+                                is_kingside = col > selected_piece[0]
+                                rook_x = 7 if is_kingside else 0
+                                new_rook_x = 5 if is_kingside else 3
                                 
-                                # Di chuyển xe
-                                board[row][new_rook_x] = board[row][rook_x]
-                                board[row][rook_x] = None
+                                # Kiểm tra vua có đang bị chiếu không
+                                if check_valid_move.is_check(board, current_player):
+                                    continue
+                                
+                                # Kiểm tra không có quân cờ nào ở giữa
+                                start = min(selected_piece[0], col) + 1
+                                end = max(selected_piece[0], col)
+                                if all(board[row][x] is None for x in range(start, end)):
+                                    # Kiểm tra xe có đúng vị trí và màu không
+                                    rook_piece = board[row][rook_x]
+                                    if rook_piece and rook_piece.startswith(current_player + "_rook"):
+                                        # Kiểm tra các ô vua đi qua có bị chiếu không
+                                        king_path = range(min(selected_piece[0], col), max(selected_piece[0], col) + 1)
+                                        temp_board = [row[:] for row in board]
+                                        is_safe = True
+                                        
+                                        for x in king_path:
+                                            temp_board[row][x] = piece
+                                            if check_valid_move.is_check(temp_board, current_player):
+                                                is_safe = False
+                                                break
+                                            temp_board[row][x] = None
+                                        
+                                        if is_safe:
+                                            # Di chuyển xe
+                                            board[row][new_rook_x] = board[row][rook_x]
+                                            board[row][rook_x] = None
+                            
+                            # Di chuyển quân cờ
+                            board[selected_piece[1]][selected_piece[0]] = None
+                            board[row][col] = piece
                             
                             # Kiểm tra phong quân
                             if "pawn" in piece:
@@ -360,10 +606,14 @@ def main():
                             if check_valid_move.is_check(board, current_player):
                                 if check_valid_move.is_checkmate(board, current_player):
                                     # Hiển thị thông báo chiếu hết
-                                    font = pygame.font.Font(None, 74)
-                                    text = font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
+                                    text = message_font.render(f"{'White' if current_player == 'black' else 'Black'} win!", True, (255, 0, 0))
                                     text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                                    screen.blit(text, text_rect)
+                                    # Vẽ nền mờ cho toàn màn hình
+                                    overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                                    overlay.fill((0, 0, 0, 128))
+                                    full_screen.blit(overlay, (0, 0))
+                                    # Vẽ thông báo
+                                    full_screen.blit(text, text_rect)
                                     pygame.display.flip()
                                     pygame.time.wait(2000)
                                     # Reset bàn cờ và bắt đầu ván mới
@@ -379,9 +629,8 @@ def main():
                                     s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
                                     s.fill(RED)
                                     screen.blit(s, (king_pos[0] * SQ_SIZE, king_pos[1] * SQ_SIZE))
-                                    font = pygame.font.Font(None, 74)
                                     pygame.display.flip()
-                                    text = font.render("Check!", True, (255, 0, 0))
+                                    text = message_font.render("Check!", True, (255, 0, 0))
                                     text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
                                     screen.blit(text, text_rect)
                                     pygame.display.flip()
