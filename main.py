@@ -27,6 +27,7 @@ RED = pygame.Color(255, 0, 0, 100)     # Màu đỏ cho chiếu
 # Biến game
 selected_piece = None
 valid_moves = []
+move_history = [] # Danh sách lịch sử nước đi
 current_player = "white"
 check = False
 w_king_pos = (4, 7)  # Vị trí vua trắng
@@ -244,7 +245,7 @@ def handle_promotion(row, col):
 
 def reset_board():
     """Reset bàn cờ về trạng thái ban đầu"""
-    global board, current_player, check, selected_piece, valid_moves, w_king_pos, b_king_pos
+    global board, current_player, check, selected_piece, valid_moves, w_king_pos, b_king_pos, move_history
     board = [
         ["black_rook", "black_knight", "black_bishop", "black_queen", "black_king", "black_bishop", "black_knight", "black_rook"],
         ["black_pawn"] * 8,
@@ -256,6 +257,7 @@ def reset_board():
     check = False
     selected_piece = None
     valid_moves = []
+    move_history = []  # Xóa lịch sử nước đi
     w_king_pos = (4, 7)
     b_king_pos = (4, 0)
     save_button = pygame.Rect(WIDTH + 20, 10, 80, 30)
@@ -304,12 +306,26 @@ def load_game():
     except:
         return False
 
+def save_state_to_history():
+    global move_history
+    state = {
+        'board': [row[:] for row in board],
+        'current_player': current_player,
+        'check': check,
+        'w_king_pos': w_king_pos,
+        'b_king_pos': b_king_pos,
+        'white_king_moved': check_valid_move.white_king_moved,
+        'black_king_moved': check_valid_move.black_king_moved,
+    }
+    move_history.append(state)
+
 def main():
-    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece, save_button, load_button
+    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece, save_button, load_button, move_history, board    
     running = True
     count_draw = 0
     promotion_pos = None  # Vị trí cần phong quân
     game_started = False  # Biến kiểm tra game đã bắt đầu chưa
+    move_history = []  # Khởi tạo lịch sử nước đi
 
     # Thêm nút Start Game
     start_button = pygame.Rect(WIDTH/2 - 100, HEIGHT/2 - 30, 200, 60)
@@ -360,6 +376,40 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                
+            elif event.type == pygame.KEYDOWN:
+                # Xử lý sự kiện Ctrl+Z để undo
+                if game_started and event.key == pygame.K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    if move_history:
+                        # Lấy ra trạng thái trước đó
+                        previous_state = move_history.pop()
+                        
+                        # Khôi phục trạng thái
+                        board = previous_state['board']
+                        current_player = previous_state['current_player']
+                        check = previous_state['check']
+                        w_king_pos = previous_state['w_king_pos']
+                        b_king_pos = previous_state['b_king_pos']
+                        check_valid_move.white_king_moved = previous_state['white_king_moved']
+                        check_valid_move.black_king_moved = previous_state['black_king_moved']
+                        
+                        # Reset lựa chọn
+                        selected_piece = None
+                        valid_moves = []
+                        
+                        # Hiển thị thông báo đã undo
+                        text = message_font.render("Đã hoàn tác", True, (0, 255, 255))
+                        text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                        
+                        # Vẽ nền mờ
+                        overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                        overlay.fill((0, 0, 0, 128))
+                        full_screen.blit(overlay, (0, 0))
+                        
+                        # Vẽ thông báo
+                        full_screen.blit(text, text_rect)
+                        pygame.display.flip()
+                        pygame.time.wait(750)
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mx, my = pygame.mouse.get_pos()
@@ -393,6 +443,8 @@ def main():
                             text = message_font.render("Game Loaded!", True, (0, 255, 0))
                             selected_piece = None
                             valid_moves = []
+                            # Reset lịch sử nước đi khi load game
+                            move_history = []
                         else:
                             text = message_font.render("Load Failed!", True, (255, 0, 0))
                         text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
@@ -418,6 +470,9 @@ def main():
                 # Xử lý phong quân nếu đang trong trạng thái phong quân
                 if promotion_pos:
                     if handle_promotion(promotion_pos[0], promotion_pos[1]):
+                        # Lưu trạng thái trước khi thực hiện phong quân
+                        save_state_to_history()
+                        
                         # Thực hiện phong quân
                         board[promotion_pos[0]][promotion_pos[1]] = promotion_piece
                         promotion_pos = None
@@ -471,6 +526,9 @@ def main():
                             selected_piece = (col, row)
                             update_valid_moves()
                     elif selected_piece and check_valid_move.can_capture(board, selected_piece, (col, row)):
+                        # Lưu trạng thái trước khi thực hiện nước đi
+                        save_state_to_history()
+                        
                         # Tạo bản sao của bàn cờ để kiểm tra nước đi
                         temp_board = [row[:] for row in board]
                         piece = temp_board[selected_piece[1]][selected_piece[0]]
@@ -541,6 +599,9 @@ def main():
                 # Click vào ô trống
                 elif selected_piece:
                     if (col, row) in valid_moves:
+                        # Lưu trạng thái trước khi thực hiện nước đi
+                        save_state_to_history()
+                        
                         # Tạo bản sao của bàn cờ để kiểm tra nước đi
                         temp_board = [row[:] for row in board]
                         piece = temp_board[selected_piece[1]][selected_piece[0]]
