@@ -61,12 +61,3 @@ Build AI_Chess from the source and install dependencies:
     conda env create -f environment.yml 
     conda activate <your_env_name>
     ```
-
-Usage
------
-(Instructions on how to run and use the application would go here - details not fully visible in the image)
-
-
-Testing
--------
-(Instructions on how to run tests would go here - details not visible in the image)
