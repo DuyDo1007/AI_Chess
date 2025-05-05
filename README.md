@@ -69,9 +69,14 @@ A modern, interactive chess game powered by AI.
 ### Usage
 
 1. **Run the application:**
-    ```bash
-    python main.py
-    ```
+    - To play the standard PvP game (no AI opponent), run:
+        ```bash
+        python main.py
+        ```
+    - To play against the AI, run:
+        ```bash
+        python main_ai.py
+        ```
 2. **Controls:**
     - Click on a piece to select it, then click a highlighted square to move.
     - Use the "Save" and "Load" buttons to manage your game state.
