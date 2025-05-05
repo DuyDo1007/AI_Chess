@@ -1,72 +1,85 @@
-AI_CHESS
+# AI_Chess
 
-Master the game, outsmart every opponent effortlessly
-Built with the tools and technologies
+A modern, interactive chess game powered by AI.
 
---------------------
-Table of Contents
---------------------
-* Overview
-* Getting Started
-    * Prerequisites
-    * Installation
-    * Usage
-    * Testing
+---
 
---------------------
-Overview
---------------------
+## Table of Contents
 
-AI_Chess is a robust chess game application designed to streamline the development of interactive chess experiences.
+- [Overview](#overview)
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Testing](#testing)
+- [License](#license)
 
-Why AI Chess?
-This project simplifies the complexities of chess game development while ensuring a rich user experience. The core features include:
+---
 
-* Game Initialization: Quickly set up the game environment, allowing developers to focus on gameplay mechanics.
-* Chessboard Setup: Provides a clear layout, reducing UI design complexity and enhancing visual organization.
-* Piece Management: Easily customize chess piece graphics for a visually appealing game.
-* Player Interaction: Intuitive piece selection and move validation improve engagement and satisfaction.
-* Move Validation: Ensures adherence to chess rules, preventing errors and maintaining game integrity.
+## Overview
 
---------------------
-Getting Started
---------------------
+**AI_Chess** is a Python-based chess application that lets you play against a computer opponent. It is designed for both casual players and developers interested in chess AI or game development. The project emphasizes ease of use, a clean interface, and robust move validation.
 
-Prerequisites
--------------
-This project requires the following dependencies:
+---
 
-* Programming Language: Python
-* Package Manager: Conda (or pip, depending on dependency management)
+## Features
 
-Installation
-------------
-Build AI_Chess from the source and install dependencies:
+- **Easy Game Setup:** Start a new game instantly with a single click.
+- **Intuitive Interface:** Click to select and move pieces, with visual highlights for valid moves.
+- **AI Opponent:** Challenge a built-in AI that makes intelligent moves.
+- **Move Validation:** All moves are checked for legality according to chess rules.
+- **Undo/Redo:** Step back through your move history.
+- **Save/Load:** Save your game progress and resume later.
+- **Pawn Promotion:** Choose your promotion piece when a pawn reaches the last rank.
+- **Check and Checkmate Detection:** Get clear notifications for check and checkmate situations.
+- **Move History & AI Thinking Time:** View a log of moves and see how long the AI takes to think.
 
-1.  Clone the repository:
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.7+**
+- **pip** (Python package manager)
+- (Optional) **conda** if you prefer environment management
+
+### Installation
+
+1. **Clone the repository:**
+    ```bash
+    git clone https://github.com/DuyDo1007/AI_Chess.git
     ```
-    git clone [https://github.com/DuyDo1007/AI_Chess](https://www.google.com/search?q=https://github.com/DuyDo1007/AI_Chess)
-    ```
-2.  Navigate to the project directory:
-    ```
+2. **Navigate to the project directory:**
+    ```bash
     cd AI_Chess
     ```
-3.  Install the dependencies:
-    (Note: The exact command depends on how dependencies are managed, e.g., requirements.txt or environment.yml. Common commands are:)
-    ```
-    pip install -r requirements.txt 
-    ```
-    or
-    ```
-    conda env create -f environment.yml 
-    conda activate <your_env_name>
-    ```
+3. **Install dependencies:**
+    - If using pip:
+        ```bash
+        pip install -r requirements.txt
+        ```
+    - Or with conda:
+        ```bash
+        conda env create -f environment.yml
+        conda activate <your_env_name>
+        ```
 
-Usage
------
-(Instructions on how to run and use the application would go here - details not fully visible in the image)
+### Usage
 
+1. **Run the application:**
+    ```bash
+    python main.py
+    ```
+2. **Controls:**
+    - Click on a piece to select it, then click a highlighted square to move.
+    - Use the "Save" and "Load" buttons to manage your game state.
+    - Press `Ctrl+Z` to undo your last move.
+    - When a pawn reaches the last rank, select the piece for promotion.
 
-Testing
--------
-(Instructions on how to run tests would go here - details not visible in the image)
+---
+
+## Testing
+
+To run tests (if available):
