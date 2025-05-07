@@ -468,6 +468,69 @@ def handle_move(start_pos, end_pos):
     if not piece:
         return False, True
     
+    # Xử lý nhập thành
+    if "king" in piece and abs(end_col - start_col) > 1:
+        # Nhập thành bên phải
+        if end_col > start_col:
+            # Di chuyển vua
+            board[start_row][start_col] = None
+            board[end_row][end_col] = piece
+            # Di chuyển xe
+            rook = board[start_row][7]
+            board[start_row][7] = None
+            board[start_row][end_col - 1] = rook
+        # Nhập thành bên trái
+        else:
+            # Di chuyển vua
+            board[start_row][start_col] = None
+            board[end_row][end_col] = piece
+            # Di chuyển xe
+            rook = board[start_row][0]
+            board[start_row][0] = None
+            board[start_row][end_col + 1] = rook
+            
+        # Cập nhật vị trí vua
+        update_king_positions()
+        
+        # Đổi lượt chơi
+        current_player = "black" if current_player == "white" else "white"
+        
+        # Kiểm tra chiếu
+        if check_valid_move.is_check(board, current_player):
+            if check_valid_move.is_checkmate(board, current_player):
+                # Hiển thị thông báo chiếu hết
+                text = message_font.render("AI wins!" if current_player == "white" else "You win!", True, (255, 0, 0))
+                text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                overlay.fill((0, 0, 0, 128))
+                screen.blit(overlay, (0, 0))
+                screen.blit(text, text_rect)
+                pygame.display.flip()
+                pygame.time.wait(2000)
+                reset_board()
+                return False, True
+            else:
+                # Hiển thị thông báo chiếu
+                king_pos = w_king_pos if current_player == "white" else b_king_pos
+                s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
+                s.fill(RED)
+                screen.blit(s, (king_pos[0] * SQ_SIZE, king_pos[1] * SQ_SIZE))
+                pygame.display.flip()
+                text = message_font.render("Check!", True, (255, 0, 0))
+                text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                screen.blit(text, text_rect)
+                pygame.display.flip()
+                pygame.time.wait(750)
+                check = True
+        elif check:
+            check = False
+        
+        # Reset selection
+        selected_piece = None
+        valid_moves = []
+        
+        return True, True
+    
     # Tạo bản sao của bàn cờ để kiểm tra nước đi
     temp_board = [row[:] for row in board]
     temp_board[start_row][start_col] = None
