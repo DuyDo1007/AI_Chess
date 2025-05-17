@@ -32,10 +32,19 @@ YELLOW = pygame.Color(255, 255, 0, 100)  # Màu vàng cho quân cờ được ch
 GREEN = pygame.Color(0, 255, 0, 100)
 RED = pygame.Color(255, 0, 0, 100)     # Màu đỏ cho chiếu
 
+# Biến cho search depth
+search_depth_options = [2, 3, 4, 5]
+current_search_depth = 3  # Giá trị mặc định
+search_depth_rects = []
+search_depth_label_text = "Search Depth:"
+search_depth_font = pygame.font.Font(None, 28)  # Font cho nhãn và các option
+selected_depth_color = pygame.Color("lightblue")
+deselected_depth_color = pygame.Color(50, 205, 50)  # Màu giống nút Save/Load
+
 # Biến game
 selected_piece = None
 valid_moves = []
-move_history = [] # Danh sách lịch sử nước đi
+move_history = []  # Danh sách lịch sử nước đi
 current_player = "white"
 check = False
 w_king_pos = (4, 7)  # Vị trí vua trắng
@@ -48,6 +57,13 @@ button_font = pygame.font.Font(None, 36)  # Font cho nút Save và Load
 message_font = pygame.font.Font(None, 74)  # Font cho thông báo chiếu và chiếu hết
 save_text = button_font.render("Save", True, (255, 255, 255))
 load_text = button_font.render("Load", True, (255, 255, 255))
+
+# Thêm biến cho màn hình hiển thị thời gian
+thinking_time_history = []  # Danh sách lưu thời gian suy nghĩ
+history_font = pygame.font.Font(None, 24)  # Font cho text trong history
+history_area = pygame.Rect(WIDTH + 40, 120, 160, HEIGHT - 140)  # Vị trí và kích thước vùng hiển thị
+scroll_offset = 0  # Vị trí cuộn hiện tại
+max_scroll = 0  # Vị trí cuộn tối đa
 
 # Xóa nút chọn chế độ chơi và biến is_ai_mode vì chỉ có một chế độ
 is_ai_mode = True  # Luôn là True vì chỉ có chế độ chơi với AI
@@ -80,12 +96,8 @@ board = [
     ["white_rook", "white_knight", "white_bishop", "white_queen","white_king", "white_bishop", "white_knight", "white_rook"]
 ]
 
-# Thêm biến cho màn hình hiển thị thời gian
-thinking_time_history = []  # Danh sách lưu thời gian suy nghĩ
-history_font = pygame.font.Font(None, 24)  # Font cho text trong history
-history_area = pygame.Rect(WIDTH + 40, 120, 160, HEIGHT - 140)  # Vị trí và kích thước vùng hiển thị
-scroll_offset = 0  # Vị trí cuộn hiện tại
-max_scroll = 0  # Vị trí cuộn tối đa
+# Thêm biến cho redo history
+redo_history = []
 
 def draw_board():
     """Vẽ bàn cờ"""
@@ -143,17 +155,20 @@ def update_valid_moves():
                         # Kiểm tra xe có đúng vị trí và màu không
                         rook_piece = board[row][7]
                         if rook_piece and rook_piece.startswith(current_player + "_rook"):
-                            # Kiểm tra các ô vua đi qua có bị chiếu không
-                            temp_board = [row[:] for row in board]
-                            is_safe = True
-                            for x in range(col, col + 3):
-                                temp_board[row][x] = piece
-                                if check_valid_move.is_check(temp_board, current_player):
-                                    is_safe = False
-                                    break
-                                temp_board[row][x] = None
-                            if is_safe:
-                                valid_moves.append((col + 2, row))
+                            # Kiểm tra bishop có còn ở vị trí ban đầu không
+                            bishop_piece = board[row][5]
+                            if bishop_piece is None or not bishop_piece.startswith(current_player + "_bishop"):
+                                # Kiểm tra các ô vua đi qua có bị chiếu không
+                                temp_board = [row[:] for row in board]
+                                is_safe = True
+                                for x in range(col, col + 3):
+                                    temp_board[row][x] = piece
+                                    if check_valid_move.is_check(temp_board, current_player):
+                                        is_safe = False
+                                        break
+                                    temp_board[row][x] = None
+                                if is_safe:
+                                    valid_moves.append((col + 2, row))
                 
                 # Nhập thành bên trái
                 if col - 2 >= 0:
@@ -162,17 +177,20 @@ def update_valid_moves():
                         # Kiểm tra xe có đúng vị trí và màu không
                         rook_piece = board[row][0]
                         if rook_piece and rook_piece.startswith(current_player + "_rook"):
-                            # Kiểm tra các ô vua đi qua có bị chiếu không
-                            temp_board = [row[:] for row in board]
-                            is_safe = True
-                            for x in range(col - 2, col + 1):
-                                temp_board[row][x] = piece
-                                if check_valid_move.is_check(temp_board, current_player):
-                                    is_safe = False
-                                    break
-                                temp_board[row][x] = None
-                            if is_safe:
-                                valid_moves.append((col - 2, row))
+                            # Kiểm tra knight có còn ở vị trí ban đầu không
+                            knight_piece = board[row][1]
+                            if knight_piece is None or not knight_piece.startswith(current_player + "_knight"):
+                                # Kiểm tra các ô vua đi qua có bị chiếu không
+                                temp_board = [row[:] for row in board]
+                                is_safe = True
+                                for x in range(col - 2, col + 1):
+                                    temp_board[row][x] = piece
+                                    if check_valid_move.is_check(temp_board, current_player):
+                                        is_safe = False
+                                        break
+                                    temp_board[row][x] = None
+                                if is_safe:
+                                    valid_moves.append((col - 2, row))
             
             # Thêm các nước đi thông thường
             for x in range(8):
@@ -339,29 +357,45 @@ def save_state_to_history():
     }
     move_history.append(state)
 
-def draw_thinking_time_history():
-    """Vẽ màn hình hiển thị thời gian suy nghĩ"""
-    # Vẽ nền trắng
-    pygame.draw.rect(screen, WHITE, history_area)
-    pygame.draw.rect(screen, (0, 0, 0), history_area, 2)  # Viền đen
+def draw_depth_buttons():
+    """Vẽ các nút chọn độ sâu tìm kiếm"""
+    # Vẽ nhãn "Search Depth:"
+    label_surface = search_depth_font.render(search_depth_label_text, True, (0, 0, 0))
+    screen.blit(label_surface, (WIDTH + 40, 80))
     
-    # Tính toán vị trí cuộn
-    global max_scroll
-    line_height = 25
-    total_height = len(thinking_time_history) * line_height
-    max_scroll = max(0, total_height - history_area.height)
+    # Vẽ các nút chọn độ sâu
+    for i, depth in enumerate(search_depth_options):
+        rect = pygame.Rect(WIDTH + 40 + (i * 40), 110, 35, 35)
+        search_depth_rects.append(rect)
+        color = selected_depth_color if depth == current_search_depth else deselected_depth_color
+        pygame.draw.rect(screen, color, rect)
+        pygame.draw.rect(screen, (0, 0, 0), rect, 2)  # Viền đen
+        text = search_depth_font.render(str(depth), True, (0, 0, 0))
+        text_rect = text.get_rect(center=rect.center)
+        screen.blit(text, text_rect)
+
+def draw_thinking_time():
+    """Vẽ thời gian suy nghĩ của AI"""
+    # Vẽ nền trắng cho vùng hiển thị
+    history_rect = pygame.Rect(WIDTH + 40, 160, 160, HEIGHT - 180)
+    pygame.draw.rect(screen, WHITE, history_rect)
+    pygame.draw.rect(screen, (0, 0, 0), history_rect, 2)  # Viền đen
     
     # Vẽ tiêu đề
     title = history_font.render("AI Thinking Time:", True, (0, 0, 0))
-    screen.blit(title, (history_area.x + 5, history_area.y + 5))
+    screen.blit(title, (WIDTH + 40, 160))
     
-    # Vẽ các dòng thời gian
-    y = history_area.y + 30 - scroll_offset
-    for i, time_value in enumerate(thinking_time_history):
-        if y + line_height > history_area.y and y < history_area.y + history_area.height:
-            text = history_font.render(f"Move {i+1}: {time_value:.2f}s", True, (0, 0, 0))
-            screen.blit(text, (history_area.x + 5, y))
-        y += line_height
+    # Tính toán vị trí cuộn
+    line_height = 25
+    total_height = len(thinking_time_history) * line_height
+    max_scroll = max(0, total_height - (HEIGHT - 200))  # 200 là khoảng cách từ trên xuống
+    
+    # Vẽ từng thời gian suy nghĩ
+    for i, time in enumerate(thinking_time_history):
+        text = history_font.render(f"Move {i+1}: {time:.2f}s", True, (0, 0, 0))
+        y_pos = 190 + (i * line_height) - scroll_offset
+        if 190 <= y_pos <= HEIGHT - 20:  # Chỉ vẽ trong vùng hiển thị
+            screen.blit(text, (WIDTH + 40, y_pos))
 
 def make_ai_move():
     """Thực hiện nước đi của AI"""
@@ -378,73 +412,60 @@ def make_ai_move():
     screen.blit(text, text_rect)
     pygame.display.flip()
     
-    # Đo thời gian suy nghĩ
     start_time = time.time()
     
-    # Lấy nước đi tốt nhất từ AI
-    best_move = get_best_move(board, current_player, depth=3)
-    
-    # Tính thời gian suy nghĩ
-    thinking_time = time.time() - start_time
-    thinking_time_history.append(thinking_time)
+    # Lấy nước đi tốt nhất từ AI với độ sâu đã chọn
+    best_move = get_best_move(board, current_player, depth=current_search_depth)
     
     if best_move:
         start_pos, end_pos = best_move
         start_col, start_row = start_pos
         end_col, end_row = end_pos
         
-        # Lưu trạng thái trước khi thực hiện nước đi
+        # Thực hiện nước đi
+        board[end_row][end_col] = board[start_row][start_col]
+        board[start_row][start_col] = None
+        
+        # Cập nhật vị trí vua nếu cần
+        if board[end_row][end_col] == "wK":
+            w_king_pos = (end_row, end_col)
+        elif board[end_row][end_col] == "bK":
+            b_king_pos = (end_row, end_col)
+            
+        # Kiểm tra chiếu
+        check = check_valid_move.is_check(board, current_player)
+        
+        # Kiểm tra chiếu hết
+        if check and check_valid_move.is_checkmate(board, current_player):
+            # Hiển thị thông báo chiếu hết
+            text = message_font.render("Checkmate!", True, (255, 0, 0))
+            text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+            overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 128))
+            screen.blit(overlay, (0, 0))
+            screen.blit(text, text_rect)
+            pygame.display.flip()
+            pygame.time.wait(2000)
+            reset_board()
+            return
+        
+        # Lưu trạng thái vào lịch sử
         save_state_to_history()
         
-        # Thực hiện nước đi
-        piece = board[start_row][start_col]
-        if piece:  # Kiểm tra piece không phải None
-            board[start_row][start_col] = None
-            board[end_row][end_col] = piece
-            
-            # Cập nhật vị trí vua nếu cần
-            update_king_positions()
-            
-            # Đổi lượt chơi
-            current_player = "white"
-            
-            # Kiểm tra chiếu sau khi di chuyển
-            if check_valid_move.is_check(board, current_player):
-                if check_valid_move.is_checkmate(board, current_player):
-                    # Hiển thị thông báo chiếu hết
-                    text = message_font.render("AI wins!", True, (255, 0, 0))
-                    text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                    # Vẽ nền mờ cho toàn màn hình
-                    overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
-                    overlay.fill((0, 0, 0, 128))
-                    screen.blit(overlay, (0, 0))
-                    # Vẽ thông báo
-                    screen.blit(text, text_rect)
-                    pygame.display.flip()
-                    pygame.time.wait(2000)
-                    # Reset bàn cờ và bắt đầu ván mới
-                    reset_board()
-                else:
-                    # Hiển thị thông báo chiếu
-                    king_pos = w_king_pos
-                    s = pygame.Surface((SQ_SIZE, SQ_SIZE), pygame.SRCALPHA)
-                    s.fill(RED)
-                    screen.blit(s, (king_pos[0] * SQ_SIZE, king_pos[1] * SQ_SIZE))
-                    pygame.display.flip()
-                    text = message_font.render("Check!", True, (255, 0, 0))
-                    text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                    screen.blit(text, text_rect)
-                    pygame.display.flip()
-                    pygame.time.wait(750)
-                    check = True
-            elif check:
-                check = False
-            
-            # Vẽ lại bàn cờ
-            draw_board()
-            draw_highlight()
-            draw_pieces()
-            pygame.display.flip()
+        # Đo thời gian suy nghĩ
+        thinking_time = time.time() - start_time
+        thinking_time_history.append(thinking_time)
+        
+        # Chuyển lượt chơi
+        current_player = "white" if current_player == "black" else "black"
+        
+        # Vẽ lại bàn cờ
+        draw_board()
+        draw_highlight()
+        draw_pieces()
+        draw_depth_buttons()
+        draw_thinking_time()
+        pygame.display.flip()
 
 def handle_move(start_pos, end_pos):
     """
@@ -499,7 +520,7 @@ def handle_move(start_pos, end_pos):
         if check_valid_move.is_check(board, current_player):
             if check_valid_move.is_checkmate(board, current_player):
                 # Hiển thị thông báo chiếu hết
-                text = message_font.render("AI wins!" if current_player == "white" else "You win!", True, (255, 0, 0))
+                text = message_font.render("Checkmate!", True, (255, 0, 0))
                 text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
                 overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
                 overlay.fill((0, 0, 0, 128))
@@ -562,7 +583,7 @@ def handle_move(start_pos, end_pos):
     if check_valid_move.is_check(board, current_player):
         if check_valid_move.is_checkmate(board, current_player):
             # Hiển thị thông báo chiếu hết
-            text = message_font.render("AI wins!" if current_player == "white" else "You win!", True, (255, 0, 0))
+            text = message_font.render("Checkmate!", True, (255, 0, 0))
             text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
             overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 128))
@@ -626,13 +647,15 @@ def execute_move(start_pos, end_pos):
     return True
 
 def main_ai():
-    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece, save_button, load_button, move_history, board, scroll_offset
+    global selected_piece, valid_moves, current_player, check, w_king_pos, b_king_pos, promotion_piece, save_button, load_button, move_history, board, scroll_offset, current_search_depth, redo_history
     running = True
     count_draw = 0
     promotion_pos = None
     game_started = False
     move_history = []
+    redo_history = []  # Khởi tạo redo history
     thinking_time_history.clear()  # Xóa lịch sử thời gian khi bắt đầu game mới
+    scroll_offset = 0  # Reset scroll offset
 
     # Thêm nút Start Game
     start_button = pygame.Rect(WIDTH/2 - 100, HEIGHT/2 - 30, 200, 60)
@@ -647,6 +670,8 @@ def main_ai():
         draw_board()
         draw_highlight()
         draw_pieces()
+        draw_depth_buttons()  # Vẽ các nút chọn độ sâu
+        draw_thinking_time()  # Vẽ thời gian suy nghĩ
         
         if not game_started:
             # Vẽ nền mờ cho toàn màn hình
@@ -676,10 +701,6 @@ def main_ai():
             row, col = promotion_pos
             draw_promotion_menu(row, col)
         
-        # Vẽ màn hình hiển thị thời gian suy nghĩ
-        if game_started:
-            draw_thinking_time_history()
-        
         pygame.display.flip()
 
         # Xử lý sự kiện
@@ -688,11 +709,25 @@ def main_ai():
                 running = False
                 
             elif event.type == pygame.KEYDOWN:
-                # Xử lý sự kiện Ctrl+Z để undo
-                if game_started and event.key == pygame.K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                if event.key == pygame.K_z and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    # Xử lý Ctrl+Z (Undo)
                     if move_history:
                         # Lấy ra trạng thái trước đó
                         previous_state = move_history.pop()
+                        prev_player = current_player  # Lưu lại lượt chơi hiện tại
+                        
+                        # Lưu trạng thái hiện tại vào redo history
+                        current_state = {
+                            'board': [row[:] for row in board],
+                            'current_player': current_player,
+                            'check': check,
+                            'w_king_pos': w_king_pos,
+                            'b_king_pos': b_king_pos,
+                            'white_king_moved': check_valid_move.white_king_moved,
+                            'black_king_moved': check_valid_move.black_king_moved,
+                            'thinking_time': thinking_time_history[-1] if thinking_time_history else None
+                        }
+                        redo_history.append(current_state)
                         
                         # Khôi phục trạng thái
                         board = previous_state['board']
@@ -703,20 +738,65 @@ def main_ai():
                         check_valid_move.white_king_moved = previous_state['white_king_moved']
                         check_valid_move.black_king_moved = previous_state['black_king_moved']
                         
-                        # Reset lựa chọn
+                        # Xóa thời gian suy nghĩ cuối cùng
+                        if thinking_time_history:
+                            thinking_time_history.pop()
+                        
+                        # Reset selection
                         selected_piece = None
                         valid_moves = []
                         
                         # Hiển thị thông báo đã undo
                         text = message_font.render("Đã hoàn tác", True, (0, 255, 255))
                         text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                        
-                        # Vẽ nền mờ
                         overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
                         overlay.fill((0, 0, 0, 128))
                         full_screen.blit(overlay, (0, 0))
+                        full_screen.blit(text, text_rect)
+                        pygame.display.flip()
+                        pygame.time.wait(750)
+                
+                elif event.key == pygame.K_y and pygame.key.get_mods() & pygame.KMOD_CTRL:
+                    # Xử lý Ctrl+Y (Redo)
+                    if redo_history:
+                        # Lấy ra trạng thái cần khôi phục
+                        next_state = redo_history.pop()
                         
-                        # Vẽ thông báo
+                        # Lưu trạng thái hiện tại vào move history
+                        current_state = {
+                            'board': [row[:] for row in board],
+                            'current_player': current_player,
+                            'check': check,
+                            'w_king_pos': w_king_pos,
+                            'b_king_pos': b_king_pos,
+                            'white_king_moved': check_valid_move.white_king_moved,
+                            'black_king_moved': check_valid_move.black_king_moved
+                        }
+                        move_history.append(current_state)
+                        
+                        # Khôi phục trạng thái
+                        board = next_state['board']
+                        current_player = next_state['current_player']
+                        check = next_state['check']
+                        w_king_pos = next_state['w_king_pos']
+                        b_king_pos = next_state['b_king_pos']
+                        check_valid_move.white_king_moved = next_state['white_king_moved']
+                        check_valid_move.black_king_moved = next_state['black_king_moved']
+                        
+                        # Khôi phục thời gian suy nghĩ
+                        if next_state['thinking_time'] is not None:
+                            thinking_time_history.append(next_state['thinking_time'])
+                        
+                        # Reset selection
+                        selected_piece = None
+                        valid_moves = []
+                        
+                        # Hiển thị thông báo đã redo
+                        text = message_font.render("Đã làm lại", True, (0, 255, 255))
+                        text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+                        overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
+                        overlay.fill((0, 0, 0, 128))
+                        full_screen.blit(overlay, (0, 0))
                         full_screen.blit(text, text_rect)
                         pygame.display.flip()
                         pygame.time.wait(750)
@@ -737,11 +817,9 @@ def main_ai():
                         else:
                             text = message_font.render("Save Failed!", True, (255, 0, 0))
                         text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                        # Vẽ nền mờ cho toàn màn hình
                         overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
                         overlay.fill((0, 0, 0, 128))
                         full_screen.blit(overlay, (0, 0))
-                        # Vẽ thông báo
                         full_screen.blit(text, text_rect)
                         pygame.display.flip()
                         pygame.time.wait(1000)
@@ -753,20 +831,23 @@ def main_ai():
                             text = message_font.render("Game Loaded!", True, (0, 255, 0))
                             selected_piece = None
                             valid_moves = []
-                            # Reset lịch sử nước đi khi load game
                             move_history = []
                         else:
                             text = message_font.render("Load Failed!", True, (255, 0, 0))
                         text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
-                        # Vẽ nền mờ cho toàn màn hình
                         overlay = pygame.Surface((screen_width, HEIGHT), pygame.SRCALPHA)
                         overlay.fill((0, 0, 0, 128))
                         full_screen.blit(overlay, (0, 0))
-                        # Vẽ thông báo
                         full_screen.blit(text, text_rect)
                         pygame.display.flip()
                         pygame.time.wait(1000)
                         continue
+
+                    # Kiểm tra click vào các nút Search Depth
+                    for i, rect in enumerate(search_depth_rects):
+                        if rect.collidepoint(mx, my):
+                            current_search_depth = search_depth_options[i]
+                            break
 
                 if not game_started:
                     continue
@@ -823,7 +904,6 @@ def main_ai():
                                 screen.blit(text, text_rect)
                                 pygame.display.flip()
                                 pygame.time.wait(750)
-                                check = True
                         elif check:
                             check = False
                         
@@ -899,8 +979,14 @@ def main_ai():
 
             elif event.type == pygame.MOUSEWHEEL:
                 # Xử lý sự kiện cuộn chuột
-                if game_started and history_area.collidepoint(pygame.mouse.get_pos()):
-                    scroll_offset = max(0, min(scroll_offset - event.y * 30, max_scroll))
+                if game_started:
+                    # Tính toán vị trí cuộn mới
+                    line_height = 25
+                    total_height = len(thinking_time_history) * line_height
+                    max_scroll = max(0, total_height - (HEIGHT - 200))
+                    
+                    # Cập nhật scroll offset
+                    scroll_offset = max(0, min(scroll_offset - event.y * line_height, max_scroll))
 
     pygame.quit()
 
