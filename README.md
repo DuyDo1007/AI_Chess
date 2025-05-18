@@ -90,7 +90,6 @@ A modern, interactive chess game powered by AI.
 To run tests (if available):
 =======
 3.  Install the dependencies:
-    (Note: The exact command depends on how dependencies are managed, e.g., requirements.txt or environment.yml. Common commands are:)
     ```
     pip install -r requirements.txt 
     ```
