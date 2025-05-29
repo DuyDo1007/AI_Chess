@@ -23,6 +23,10 @@ A modern, interactive chess game powered by AI.
 
 ---
 
+## Demo Video
+
+https://youtu.be/TeifJeOFReA
+
 ## Features
 
 - **Easy Game Setup:** Start a new game instantly with a single click.
@@ -48,54 +52,54 @@ A modern, interactive chess game powered by AI.
 ### Installation
 
 1. **Clone the repository:**
-    ```bash
-    git clone https://github.com/DuyDo1007/AI_Chess.git
-    ```
+   ```bash
+   git clone https://github.com/DuyDo1007/AI_Chess.git
+   ```
 2. **Navigate to the project directory:**
-    ```bash
-    cd AI_Chess
-    ```
+   ```bash
+   cd AI_Chess
+   ```
 3. **Install dependencies:**
-    - If using pip:
-        ```bash
-        pip install -r requirements.txt
-        ```
-    - Or with conda:
-        ```bash
-        conda env create -f environment.yml
-        conda activate <your_env_name>
-        ```
+   - If using pip:
+     ```bash
+     pip install -r requirements.txt
+     ```
+   - Or with conda:
+     ```bash
+     conda env create -f environment.yml
+     conda activate <your_env_name>
+     ```
 
 ### Usage
 
 1. **Run the application:**
-    - To play the standard PvP game (no AI opponent), run:
-        ```bash
-        python main.py
-        ```
-    - To play against the AI, run:
-        ```bash
-        python main_ai.py
-        ```
+   - To play the standard PvP game (no AI opponent), run:
+     ```bash
+     python main.py
+     ```
+   - To play against the AI, run:
+     ```bash
+     python main_ai.py
+     ```
 2. **Controls:**
-    - Click on a piece to select it, then click a highlighted square to move.
-    - Use the "Save" and "Load" buttons to manage your game state.
-    - Press `Ctrl+Z` to undo your last move.
-    - When a pawn reaches the last rank, select the piece for promotion.
+   - Click on a piece to select it, then click a highlighted square to move.
+   - Use the "Save" and "Load" buttons to manage your game state.
+   - Press `Ctrl+Z` to undo your last move.
+   - When a pawn reaches the last rank, select the piece for promotion.
 
 ---
 
 ## Testing
 
-To run tests (if available):
-=======
+# To run tests (if available):
+
 3.  Install the dependencies:
     (Note: The exact command depends on how dependencies are managed, e.g., requirements.txt or environment.yml. Common commands are:)
     ```
-    pip install -r requirements.txt 
+    pip install -r requirements.txt
     ```
     or
     ```
-    conda env create -f environment.yml 
+    conda env create -f environment.yml
     conda activate <your_env_name>
     ```
